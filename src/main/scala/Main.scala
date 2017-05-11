@@ -1,22 +1,15 @@
 import java.io.File
 
-import com.sksamuel.scrimage.filter.{GrayscaleFilter, SobelsFilter, ThresholdFilter}
+import com.sksamuel.scrimage.Filter
+import com.sksamuel.scrimage.filter.{ContrastFilter, GrayscaleFilter, SobelsFilter, ThresholdFilter}
 import com.sksamuel.scrimage.{Image, Pixel}
-
-import scalafx.application.JFXApp
-import scalafx.application.JFXApp.PrimaryStage
-import scalafx.scene.Scene
-import scalafx.scene.effect._
-import scalafx.scene.layout.HBox
-import scalafx.scene.paint.Color._
-import scalafx.scene.paint.{LinearGradient, Stops}
-import scalafx.scene.text.Text
 /**
   * Created by Jonathan on 10/05/2017.
   */
-object Main extends JFXApp  {
+object Main extends App {
+  // JFXApp  {
 
-  stage = new PrimaryStage {
+  /*stage = new PrimaryStage {
     title = "ScalaFX Hello World"
     width = 650
     height = 450
@@ -54,29 +47,65 @@ object Main extends JFXApp  {
         }
       }
     }
-  }
+  }*/
 
-  val image = Image.fromFile(new File("img.jpg"))
+  val image = Image.fromFile(new File("ecran.png"))
   val out = new File("img2.png")
 
+  image.filter(GrayscaleFilter)
 
-  val pixel = Pixel.apply(0, 255, 0, 100)
+  val contrasted = test(image)
 
+  contrasted.output(new File("contrasted.png"))
 
+  contrasted.filter(ThresholdFilter.apply(33)).output(new File("thresholded.png"))
 
-  val blank = Image.filled(100, 100)
+/*
+  val grey = applyAndSave(image, GrayscaleFilter, "gray.png")
 
-  blank.map { case (x, y, pix) =>
-    Pixel(0, 255, 0, 255)
-  }.output("green.png")
+  //val contrasted = applyAndSave(grey, ContrastFilter.apply(0.5), "contrasted.png")
 
-  val t = SobelsFilter
-  val r = ThresholdFilter
+  val sobeled = applyAndSave(grey, SobelsFilter, "sobeled.png")
 
-  val s = ThresholdFilter.apply(128)
+*/
+  def test(img: Image): Image = {
+    val histogram = new Array[Int](256)
 
-  //image.filter(GrayscaleFilter, SobelsFilter, s).output(out)
+    img.foreach { case (_, _, pixel) =>
+      histogram(pixel.red) += 1
+    }
 
+    val cumulatedHistogram = new Array[Int](256)
 
+    histogram.zipWithIndex.foreach { case (nbGreyForIdx, greyIdx) =>
+      if (greyIdx == 0) {
+        cumulatedHistogram(greyIdx) = nbGreyForIdx
+      } else {
+        cumulatedHistogram(greyIdx) = cumulatedHistogram(greyIdx - 1) + nbGreyForIdx
+      }
+    }
 
+    val product = img.width * img.height
+    val res = img.map { case (x, y, pix) =>
+
+      val newGrey = 255 * cumulatedHistogram(pix.red) / product
+      Pixel.apply(newGrey, newGrey, newGrey, 255)
+    }
+
+    val resultHistogram = new Array[Int](256)
+
+    res.foreach { case (_, _, pixel) =>
+      resultHistogram(pixel.red) += 1
+    }
+
+    println(resultHistogram.mkString("-"))
+    res
+  }
+
+  def applyAndSave(img: Image, filter: Filter, outPath: String) = {
+    val filtered = img.filter(filter)
+    filtered.output(new File(outPath))
+
+    filtered
+  }
 }
