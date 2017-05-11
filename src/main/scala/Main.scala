@@ -58,7 +58,9 @@ object Main extends App {
 
   contrasted.output(new File("contrasted.png"))
 
-  contrasted.filter(ThresholdFilter.apply(33)).output(new File("thresholded.png"))
+  val thresholded = threshold(contrasted, 30, 60)
+
+  thresholded.output(new File("thresholded.png"))
 
 /*
   val grey = applyAndSave(image, GrayscaleFilter, "gray.png")
@@ -100,6 +102,16 @@ object Main extends App {
 
     println(resultHistogram.mkString("-"))
     res
+  }
+
+  def threshold(img: Image, inf: Int, sup: Int): Image = {
+    img.map { case (_, _, pixel) =>
+      if (pixel.red > sup || pixel.red < inf) {
+        Pixel.apply(0, 0, 0, 255)
+      } else {
+        Pixel.apply(255, 255, 255, 255)
+      }
+    }
   }
 
   def applyAndSave(img: Image, filter: Filter, outPath: String) = {
